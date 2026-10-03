@@ -5,6 +5,7 @@
 <title></title>
 <style>
   html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:default;
+    overscroll-behavior:none;touch-action:none;
     font-family:Arial,Helvetica,sans-serif;color:#ddd;-webkit-user-select:none;user-select:none}
 
   /* bait: heavy thumbnail-style headline next to a plain button */
@@ -43,15 +44,15 @@
   #go button:active{transform:translateY(0) scale(.99)}
   #go button:focus-visible{outline:2px solid #e01b1b;outline-offset:4px}
 
-  /* horror stage: hidden until the click */
-  #stage{position:fixed;inset:0;display:none;place-items:center;
-    background:radial-gradient(ellipse at 50% 45%,#1a0505 0%,#000 70%)}
-  #face{width:min(88vmin,900px);animation:breathe 2.7s ease-in-out infinite}
-  #face,#faceSvg{object-fit:contain}
-  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  /* horror stage: hidden until the click, full-bleed and static */
+  #stage{position:fixed;inset:0;display:none;background:#000}
+  #face{position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;object-position:50% 30%}
+  #faceSvg{position:absolute;inset:0;width:100%;height:100%}
   #cap{position:fixed;left:0;right:0;bottom:6vh;text-align:center;
     font:clamp(18px,3.4vmin,40px)/1 Georgia,serif;letter-spacing:.35em;
-    text-transform:uppercase;opacity:.85;text-shadow:0 0 18px #b00}
+    text-transform:uppercase;opacity:.85;text-shadow:0 0 18px #b00;
+    padding:0 4vmin}
   #vig{position:fixed;inset:0;pointer-events:none;display:none;z-index:5;
     box-shadow:inset 0 0 22vmin 8vmin #000;opacity:.85}
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;
@@ -99,7 +100,6 @@
 
 <script>
 const cap   = document.getElementById('cap');
-const face  = document.getElementById('face');
 const flash = document.getElementById('flash');
 const LINES = ['не уходи','ты один','смотри в глаза','я тут','не выключай'];
 let i = 0, ac, master, live = false;
@@ -151,25 +151,22 @@ function scream(){
 
 function reveal(){
   document.getElementById('go').remove();
-  document.getElementById('stage').style.display = 'grid';
+  document.getElementById('stage').style.display = 'block';
   document.getElementById('vig').style.display   = 'block';
   document.getElementById('flash').style.display = 'block';
   document.body.style.cursor = 'none';
   scream();
   if (navigator.vibrate) navigator.vibrate([300, 80, 300, 80, 600]);
-  if (document.documentElement.requestFullscreen)
-    document.documentElement.requestFullscreen().catch(() => {});
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
   live = true;
 }
 
 let last = 0;
-(function loop(ts){
-  requestAnimationFrame(loop);
-  if (!live) return;
-  if (ts - last > 1800){ last = ts; cap.textContent = LINES[i++ % LINES.length]; }
-  face.style.transform =
-    `translate(${(Math.random()*14-7)|0}px,${(Math.random()*10-5)|0}px) rotate(${(Math.random()*3-1.5)|0}deg)`;
-})(0);
+setInterval(() => {
+  if (live) cap.textContent = LINES[i++ % LINES.length];
+}, 1800);
 
 function strobe(){
   if (!live) return;
