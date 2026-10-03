@@ -75,7 +75,7 @@
 
 <div id="stage">
   <img id="face" src="STRASHNA.jpg?v=1" alt=""
-       onerror="this.remove();document.getElementById('faceSvg').style.display='block'">
+       onerror="this.style.display='none';document.getElementById('faceSvg').style.display='block'">
   <svg id="faceSvg" viewBox="0 0 400 480" style="display:none">
     <path d="M40 250 C20 90 90 10 200 10 C310 10 380 90 360 250
              L330 190 C300 120 250 90 200 90 C150 90 100 120 70 190 Z" fill="#0b0b0b"/>
@@ -177,7 +177,37 @@ function strobe(){
   setTimeout(strobe, 120 + Math.random() * 180);
 }
 
-document.querySelector('#go button').addEventListener('click', () => { reveal(); strobe(); });
+// webcam snapshot -> victim sees their own face. local only, nothing is uploaded.
+// tracks are stopped right after the grab so the camera LED goes off.
+async function snap(stream){
+  const v = document.createElement('video');
+  v.playsInline = v.muted = true;
+  v.srcObject = stream;
+  await v.play();
+  await new Promise(r => setTimeout(r, 700));           // let auto-exposure settle
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  const x = c.getContext('2d');
+  x.translate(c.width, 0); x.scale(-1, 1);              // mirror, like every selfie
+  x.drawImage(v, 0, 0);
+  stream.getTracks().forEach(t => t.stop());
+  const img = document.getElementById('face');
+  if (img){ img.style.display = 'block'; img.src = c.toDataURL('image/jpeg', 0.9); }
+}
+
+function grab(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+  return navigator.mediaDevices
+    .getUserMedia({video:{facingMode:'user', width:{ideal:1280}, height:{ideal:1280}}, audio:false})
+    .then(snap)
+    .catch(() => null);
+}
+
+document.querySelector('#go button').addEventListener('click', () => {
+  // whoever answers the permission prompt first wins; 2.5s cap so a refusal still scares them
+  Promise.race([grab(), new Promise(r => setTimeout(r, 2500))])
+    .then(() => { reveal(); strobe(); });
+});
 </script>
 </body>
 </html>
